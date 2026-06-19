@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NagrikSeva — Complaint Portal</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <span class="logo" onclick="go('submit')">🏛 NagrikSeva</span>
+  <div class="links">
+    <button class="nav-btn active" id="nav-submit" onclick="go('submit')">Submit</button>
+    <button class="nav-btn" id="nav-track" onclick="go('track')">Track</button>
+    <button class="nav-btn" id="nav-dept" onclick="go('dept')">Department</button>
+    <button class="nav-btn" id="nav-admin" onclick="go('admin')">Admin</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside>
+    <button class="active" onclick="go('submit')">📝 Submit</button>
+    <button onclick="go('track')">🔍 Track Status</button>
+    <button onclick="go('dept')">🏢 Department</button>
+    <button onclick="go('admin')">📊 Admin</button>
+  </aside>
+
+  <main>
+
+    <!-- SUBMIT PAGE -->
+    <div class="page active" id="page-submit">
+      <h2>Submit a Complaint</h2>
+      <p class="sub">Fill in the form. You'll get a unique tracking ID.</p>
+
+      <form id="f-form" onsubmit="return false">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13.5px;color:#555">
+            <label style="display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="f-anon" onchange="document.getElementById('name-row').style.display=this.checked?'none':''">
+              Submit anonymously
+            </label>
+          </div>
+          <div class="row" id="name-row">
+            <div class="field"><label>Name <span style="color:red">*</span></label><input type="text" id="f-name" placeholder="Your name"></div>
+            <div class="field"><label>Phone</label><input type="text" id="f-phone" placeholder="+91 ..."></div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Department <span style="color:red">*</span></label>
+              <select id="f-dept">
+                <option value="">— Select —</option>
+                <option value="water">Water Supply</option>
+                <option value="roads">Roads</option>
+                <option value="electricity">Electricity</option>
+                <option value="sanitation">Sanitation</option>
+                <option value="health">Health</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Priority</label>
+              <select id="f-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          <div class="row full">
+            <div class="field"><label>Title <span style="color:red">*</span></label><input type="text" id="f-title" placeholder="Brief issue summary"></div>
+          </div>
+          <div class="row full">
+            <div class="field"><label>Description <span style="color:red">*</span></label><textarea id="f-desc" placeholder="Describe the problem in detail..."></textarea></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Location <span style="color:red">*</span></label><input type="text" id="f-loc" placeholder="Area / Colony"></div>
+            <div class="field"><label>Attach File</label><input type="file" accept="image/*,.pdf"></div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" type="button" onclick="resetForm()">Clear</button>
+            <button class="btn btn-gold" type="button" onclick="submitForm()">✓ Submit Complaint</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="f-success" style="display:none">
+        <div class="card" style="text-align:center;padding:30px">
+          <div style="font-size:40px;margin-bottom:10px">✅</div>
+          <h3 style="font-size:20px;margin-bottom:8px">Complaint Registered!</h3>
+          <p style="color:#888;margin-bottom:16px">Your tracking ID:</p>
+          <div style="font-size:28px;font-weight:700;color:#f0c040;letter-spacing:3px;margin-bottom:20px" id="success-id"></div>
+          <button class="btn btn-dark" onclick="go('track')">Track Complaint</button>
+          <button class="btn btn-ghost" onclick="resetForm()" style="margin-left:8px">Submit Another</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRACK PAGE -->
+    <div class="page" id="page-track">
+      <h2>Track Complaint</h2>
+      <p class="sub">Enter your tracking ID to see live status.</p>
+      <div class="card">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input type="text" id="track-id" placeholder="e.g. NS-001, NS-002, NS-003"
+            style="flex:1;padding:9px 12px;border:1.5px solid #dde3ed;border-radius:7px;font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter')search()">
+          <button class="btn btn-dark" onclick="search()">Search</button>
+        </div>
+      </div>
+      <div id="track-result"></div>
+    </div>
+
+    <!-- DEPT PAGE -->
+    <div class="page" id="page-dept">
+      <h2>Department Dashboard</h2>
+      <p class="sub">Manage and update assigned complaints.</p>
+      <div class="stats">
+        <div class="stat"><div class="l">Open</div><div class="n">4</div></div>
+        <div class="stat"><div class="l">SLA Breaches</div><div class="n" style="color:#c0392b">1</div></div>
+        <div class="stat"><div class="l">Resolved</div><div class="n">1,091</div></div>
+        <div class="stat"><div class="l">Rating</div><div class="n">4.1★</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <input type="text" id="search-q" placeholder="Search complaints..." oninput="filterTable()"
+          style="flex:1;padding:8px 12px;border:1.5px solid #dde3ed;border-radius:7px;font-size:13px;outline:none">
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>ID</th><th>Name</th><th>Title</th><th>Priority</th><th>Status</th><th>Location</th><th>Action</th></tr></thead>
+          <tbody id="dept-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMIN PAGE -->
+    <div class="page" id="page-admin">
+      <h2>Analytics Dashboard</h2>
+      <p class="sub">Complaint volumes and department performance.</p>
+      <div class="stats">
+        <div class="stat"><div class="l">Total</div><div class="n">1,284</div></div>
+        <div class="stat"><div class="l">Resolved</div><div class="n">1,091</div></div>
+        <div class="stat"><div class="l">Pending</div><div class="n">193</div></div>
+        <div class="stat"><div class="l">Avg. Resolution</div><div class="n">2.8d</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card">
+          <b style="font-size:14px">Complaints by Department</b>
+          <div class="bar-chart" id="dept-bars" style="margin-top:14px"></div>
+        </div>
+        <div class="card">
+          <b style="font-size:14px">Status Breakdown</b>
+          <div style="margin-top:14px;font-size:13.5px;line-height:2.2">
+            <div>✅ Resolved — <b>1,091</b> (85%)</div>
+            <div>🟡 Open — <b>120</b></div>
+            <div>🔴 Escalated — <b>14</b></div>
+            <div>⏳ Pending — <b>59</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <b style="font-size:14px">Audit Trail</b>
+        <table style="margin-top:12px">
+          <thead><tr><th>Time</th><th>Action</th><th>By</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#888;font-size:12px">10 Dec, 10:15 AM</td><td>NS-004 submitted</td><td style="color:#888">System</td></tr>
+            <tr><td style="color:#888;font-size:12px">08 Dec, 11:05 AM</td><td>NS-001 assigned to JE Kumar</td><td style="color:#888">Auto-route</td></tr>
+            <tr><td style="color:#888;font-size:12px">05 Dec, 4:00 PM</td><td>NS-002 SLA breach flagged</td><td style="color:#888">System</td></tr>
+            <tr><td style="color:#888;font-size:12px">03 Dec, 2:00 PM</td><td>NS-003 marked Resolved</td><td style="color:#888">Sanitation Dept.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MANAGE MODAL -->
+<div class="overlay" id="manage-modal">
+  <div class="modal">
+    <h3><span id="modal-title">Manage Complaint</span><button onclick="closeModal()">✕</button></h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
