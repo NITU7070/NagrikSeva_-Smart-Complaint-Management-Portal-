@@ -1,4 +1,4 @@
-Readme · MDCopyNagrikSeva — Complaint Management Portal
+NagrikSeva — Complaint Management Portal
 
 A simple web portal where citizens can submit complaints, track their status, and departments can manage resolutions.
 
