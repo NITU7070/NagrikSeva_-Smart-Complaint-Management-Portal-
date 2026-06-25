@@ -16,6 +16,19 @@ nav {
   height: 52px;
 }
 
+body.dark { background: #0f1117; color: #e0e0e0; }
+body.dark nav { background: #09090f; }
+body.dark aside { background: #13131c; border-color: #2a2a3a; }
+body.dark aside button { color: #aaa; }
+body.dark aside button.active { background: rgba(240,192,64,0.12); color: #f0c040; }
+body.dark .card { background: #13131c; border-color: #2a2a3a; }
+body.dark .stat { background: #13131c; border-color: #2a2a3a; }
+body.dark input, body.dark select, body.dark textarea { background: #1e1e2e; border-color: #3a3a4a; color: #eee; }
+body.dark table td { border-color: #1e1e2e; color: #ccc; }
+body.dark tr:hover td { background: #1a1a28; }
+body.dark .modal { background: #13131c; }
+body.dark .btn-ghost { border-color: #3a3a4a; color: #aaa; }
+
 nav .logo { font-size: 17px; font-weight: 700; color: #f0c040; cursor: pointer; }
 
 nav .links { display: flex; gap: 4px; }
