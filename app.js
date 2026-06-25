@@ -1,503 +1,194 @@
-/* ===== THEME ===== */
-function toggleTheme() {
-    const root = document.documentElement;
-    const isDark = root.getAttribute('data-theme') === 'dark';
-    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    document.querySelector('.theme-icon').textContent = isDark ? '🌙' : '☀️';
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
-    if (window._barChart) window._barChart.update();
-    if (window._donutChart) window._donutChart.update();
-  }
-  
-  (function initTheme() {
-    const saved = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-    const icon = document.querySelector('.theme-icon');
-    if (icon) icon.textContent = saved === 'dark' ? '☀️' : '🌙';
-  })();
-  
-  /* ===== NAVIGATION ===== */
-  function showPage(id) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + id).classList.add('active');
-    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    const links = document.querySelectorAll('.nav-link');
-    const order = ['home','submit','track','dashboard','analytics'];
-    const idx = order.indexOf(id);
-    if (idx > -1) links[idx]?.classList.add('active');
-    window.scrollTo(0, 0);
-    if (id === 'analytics') setTimeout(initCharts, 100);
-    if (id === 'dashboard') renderDashboardTable();
-  }
-  
-  function toggleMobileMenu() {
-    document.getElementById('mobileMenu').classList.toggle('open');
-  }
-  
-  /* ===== DEPT ROUTING ===== */
-  const deptMap = {
-    water: '💧 Water & Sanitation Dept.',
-    electricity: '⚡ Electrical Department',
-    roads: '🛣️ Roads & Transport Dept.',
-    healthcare: '🏥 Health Services Dept.',
-    education: '📚 Education Department',
-    police: '🚔 Police Commissioner\'s Office',
-    revenue: '📋 Revenue & Land Records',
-    environment: '🌿 Environment Department',
-    other: '📨 General Grievance Cell'
-  };
-  
-  function updateDeptPreview() {
-    const val = document.getElementById('category').value;
-    const el = document.getElementById('deptPreview');
-    if (val && deptMap[val]) {
-      el.textContent = deptMap[val];
-      el.classList.add('assigned');
-    } else {
-      el.textContent = 'Select a category to see assignment';
-      el.classList.remove('assigned');
-    }
-  }
-  
-  /* ===== ANONYMOUS TOGGLE ===== */
-  function toggleAnon() {
-    const checked = document.getElementById('anonCheck').checked;
-    document.getElementById('personalFields').style.display = checked ? 'none' : 'block';
-  }
-  
-  /* ===== CHAR COUNT ===== */
-  document.getElementById('description')?.addEventListener('input', function() {
-    const n = this.value.length;
-    document.getElementById('charCount').textContent = n;
-    if (n > 900) document.getElementById('charCount').style.color = '#b91c1c';
-    else document.getElementById('charCount').style.color = '';
+const data = [
+  { id:"NS-001", name:"Rajesh Kumar", dept:"water", title:"No water supply for 3 days", priority:"high", status:"open", loc:"Gomtinagar", filed:"2024-12-08", sla:3,
+    steps:[{l:"Submitted",d:true,ts:"08 Dec 10:24 AM"},{l:"Acknowledged",d:true,ts:"08 Dec 11:05 AM"},{l:"In Progress",d:false,ts:""},{l:"Resolved",d:false,ts:""}] },
+  { id:"NS-002", name:"Priya Sharma", dept:"roads", title:"Pothole on MG Road", priority:"high", status:"escalated", loc:"Hazratganj", filed:"2024-12-05", sla:5,
+    steps:[{l:"Submitted",d:true,ts:"05 Dec 3:10 PM"},{l:"Acknowledged",d:true,ts:"05 Dec 4:00 PM"},{l:"In Progress",d:true,ts:"06 Dec 9:00 AM"},{l:"Resolved",d:false,ts:""}] },
+  { id:"NS-003", name:"Anonymous", dept:"sanitation", title:"Garbage not collected", priority:"medium", status:"resolved", loc:"Alambagh", filed:"2024-12-01", sla:3,
+    steps:[{l:"Submitted",d:true,ts:"01 Dec 8:00 AM"},{l:"Acknowledged",d:true,ts:"01 Dec 9:30 AM"},{l:"In Progress",d:true,ts:"02 Dec 10 AM"},{l:"Resolved",d:true,ts:"03 Dec 2:00 PM"}] }
+];
+
+const depts = { water:"Water Supply", roads:"Roads", electricity:"Electricity", sanitation:"Sanitation", health:"Health", other:"General" };
+const slaMap = { water:3, roads:7, electricity:5, sanitation:3, health:2, other:5 };
+let nextId = 4;
+
+// Nav 
+function go(view) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("page-" + view).classList.add("active");
+  document.getElementById("nav-" + view).classList.add("active");
+  if (view === "dept")  renderDept();
+  if (view === "admin") renderAdmin();
+}
+
+// Submit
+function submitForm() {
+  const title = document.getElementById("f-title").value.trim();
+  const dept  = document.getElementById("f-dept").value;
+  const desc  = document.getElementById("f-desc").value.trim();
+  const loc   = document.getElementById("f-loc").value.trim();
+  if (!title || !dept || !desc || !loc) { alert("Fill all required fields."); return; }
+
+  const anon = document.getElementById("f-anon").checked;
+  const id   = "NS-00" + nextId++;
+  data.push({
+    id, dept, title, priority: document.getElementById("f-priority").value,
+    name: anon ? "Anonymous" : (document.getElementById("f-name").value.trim() || "Anonymous"),
+    status: "open", loc, filed: new Date().toISOString().slice(0,10), sla: slaMap[dept] || 5,
+    steps: [{l:"Submitted",d:true,ts:"Just now"},{l:"Acknowledged",d:false,ts:""},{l:"In Progress",d:false,ts:""},{l:"Resolved",d:false,ts:""}]
   });
-  
-  /* ===== FILE HANDLING ===== */
-  let uploadedFiles = [];
-  
-  function handleFileSelect(e) {
-    addFiles(Array.from(e.target.files));
-  }
-  
-  function handleDrop(e) {
-    e.preventDefault();
-    addFiles(Array.from(e.dataTransfer.files));
-  }
-  
-  function addFiles(files) {
-    files.forEach(f => {
-      if (f.size > 10 * 1024 * 1024) { alert(`${f.name} exceeds 10 MB limit.`); return; }
-      uploadedFiles.push(f);
-    });
-    renderFileList();
-  }
-  
-  function renderFileList() {
-    const el = document.getElementById('fileList');
-    el.innerHTML = uploadedFiles.map((f, i) => `
-      <div class="file-item">
-        📎 ${f.name} (${(f.size/1024).toFixed(0)} KB)
-        <button onclick="removeFile(${i})">✕</button>
-      </div>`).join('');
-  }
-  
-  function removeFile(i) {
-    uploadedFiles.splice(i, 1);
-    renderFileList();
-  }
-  
-  /* ===== FORM VALIDATION & SUBMIT ===== */
-  function validate(id, errId, msg) {
-    const el = document.getElementById(id);
-    const val = el?.value?.trim();
-    if (!val) {
-      document.getElementById(errId).textContent = msg;
-      el?.classList.add('invalid');
-      return false;
-    }
-    document.getElementById(errId).textContent = '';
-    el?.classList.remove('invalid');
-    return true;
-  }
-  
-  function submitComplaint(e) {
-    e.preventDefault();
-    const isAnon = document.getElementById('anonCheck').checked;
-    let ok = true;
-  
-    if (!isAnon) {
-      ok = validate('fullName', 'err-name', 'Full name is required.') && ok;
-      const emailEl = document.getElementById('email');
-      if (!emailEl.value || !/^\S+@\S+\.\S+$/.test(emailEl.value)) {
-        document.getElementById('err-email').textContent = 'Valid email is required.';
-        emailEl.classList.add('invalid');
-        ok = false;
-      } else {
-        document.getElementById('err-email').textContent = '';
-        emailEl.classList.remove('invalid');
-      }
-    }
-  
-    ok = validate('category', 'err-cat', 'Please select a category.') && ok;
-    ok = validate('location', 'err-loc', 'Location is required.') && ok;
-    ok = validate('subject', 'err-sub', 'Subject is required.') && ok;
-  
-    const desc = document.getElementById('description').value.trim();
-    if (desc.length < 20) {
-      document.getElementById('err-desc').textContent = 'Please describe the issue in at least 20 characters.';
-      document.getElementById('description').classList.add('invalid');
-      ok = false;
-    } else {
-      document.getElementById('err-desc').textContent = '';
-      document.getElementById('description').classList.remove('invalid');
-    }
-  
-    if (!ok) return;
-  
-    const id = generateTrackingId();
-    document.getElementById('modalTrackingId').textContent = id;
-    document.getElementById('successModal').classList.add('open');
-    storeComplaint(id);
-  }
-  
-  function generateTrackingId() {
-    const n = String(Math.floor(10000 + Math.random() * 90000));
-    return `NS-2025-${n}`;
-  }
-  
-  function storeComplaint(id) {
-    const complaints = JSON.parse(localStorage.getItem('ns_complaints') || '[]');
-    complaints.push({
-      id,
-      subject: document.getElementById('subject')?.value || 'Submitted complaint',
-      category: document.getElementById('category')?.value || 'other',
-      location: document.getElementById('location')?.value || '',
-      priority: document.getElementById('priority')?.value || 'medium',
-      status: 'open',
-      submittedAt: new Date().toISOString()
-    });
-    localStorage.setItem('ns_complaints', JSON.stringify(complaints));
-  }
-  
-  function closeModal() {
-    document.getElementById('successModal').classList.remove('open');
-  }
-  
-  function copyTrackingId() {
-    const id = document.getElementById('modalTrackingId').textContent;
-    navigator.clipboard.writeText(id).then(() => alert('Tracking ID copied!'));
-  }
-  
-  function resetForm() {
-    document.getElementById('complaintForm').reset();
-    uploadedFiles = [];
-    document.getElementById('fileList').innerHTML = '';
-    document.getElementById('charCount').textContent = '0';
-    updateDeptPreview();
-    document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
-    document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
-  }
-  
-  /* ===== TRACK COMPLAINT ===== */
-  const demoComplaints = {
-    'NS-2025-08841': {
-      id: 'NS-2025-08841',
-      subject: 'Water supply disruption — Sector 14',
-      dept: 'Water & Sanitation',
-      loc: 'Sector 14, Lucknow',
-      sla: '3 days left',
-      slaClass: 'sla-ok',
-      priority: 'High',
-      status: 'inprogress',
-      statusLabel: 'In Progress',
-      timeline: [
-        { done: true, icon: '✓', action: 'Complaint submitted', meta: 'Jan 14, 2025 · 09:22 AM', note: null },
-        { done: true, icon: '✓', action: 'Acknowledged by system', meta: 'Jan 14, 2025 · 09:23 AM', note: null },
-        { done: true, icon: '✓', action: 'Assigned — Water & Sanitation Dept.', meta: 'Jan 14, 2025 · 11:05 AM', note: 'SLA set: 3 business days (Priority: High)' },
-        { done: false, active: true, icon: '●', action: 'Field inspection scheduled', meta: 'Jan 15, 2025 · In progress', note: 'Officer Ramesh Gupta assigned. Site visit on Jan 16.' },
-        { done: false, icon: '○', action: 'Resolution', meta: 'Pending', note: null }
-      ]
-    },
-    'NS-2025-07723': {
-      id: 'NS-2025-07723',
-      subject: 'Street light not working near Park Road',
-      dept: 'Electricity Department',
-      loc: 'Park Road, Lucknow',
-      sla: 'Resolved on time',
-      slaClass: 'sla-ok',
-      priority: 'Medium',
-      status: 'resolved',
-      statusLabel: 'Resolved',
-      showFeedback: true,
-      timeline: [
-        { done: true, icon: '✓', action: 'Complaint submitted', meta: 'Jan 10, 2025 · 07:14 PM', note: null },
-        { done: true, icon: '✓', action: 'Assigned — Electrical Department', meta: 'Jan 10, 2025 · 07:15 PM', note: null },
-        { done: true, icon: '✓', action: 'Work order raised', meta: 'Jan 11, 2025 · 10:00 AM', note: 'Work order #WO-2025-441 created.' },
-        { done: true, icon: '✓', action: 'Repair completed', meta: 'Jan 13, 2025 · 03:45 PM', note: 'Faulty bulb replaced. Light operational.' },
-        { done: true, icon: '✓', action: 'Closed', meta: 'Jan 13, 2025 · 04:00 PM', note: null }
-      ]
-    },
-    'NS-2025-06614': {
-      id: 'NS-2025-06614',
-      subject: 'Garbage not collected for 5 days',
-      dept: 'Environment Department',
-      loc: 'Civil Lines, Lucknow',
-      sla: 'SLA BREACHED',
-      slaClass: 'sla-breach',
-      priority: 'Urgent',
-      status: 'escalated',
-      statusLabel: 'Escalated',
-      timeline: [
-        { done: true, icon: '✓', action: 'Complaint submitted', meta: 'Jan 8, 2025 · 08:30 AM', note: null },
-        { done: true, icon: '✓', action: 'Assigned — Environment Dept.', meta: 'Jan 8, 2025 · 08:31 AM', note: 'SLA: 24 hours (Urgent)' },
-        { done: true, icon: '✓', action: 'Assigned to sanitation worker', meta: 'Jan 8, 2025 · 10:00 AM', note: null },
-        { done: true, escalated: true, icon: '!', action: 'Escalated — SLA breached', meta: 'Jan 9, 2025 · 08:31 AM', note: 'Auto-escalated to Zonal Director after SLA breach.' },
-        { done: false, active: true, icon: '●', action: 'Director review in progress', meta: 'Ongoing', note: null }
-      ]
-    }
-  };
-  
-  function loadDemo(id) {
-    document.getElementById('trackInput').value = id;
-    trackComplaint();
-  }
-  
-  function trackComplaint() {
-    const input = document.getElementById('trackInput').value.trim().toUpperCase();
-    const el = document.getElementById('trackResult');
-  
-    const local = JSON.parse(localStorage.getItem('ns_complaints') || '[]').find(c => c.id === input.toUpperCase());
-  
-    if (demoComplaints[input]) {
-      renderTrackResult(demoComplaints[input]);
-      el.classList.remove('hidden');
-    } else if (local) {
-      renderTrackResult({
-        id: local.id,
-        subject: local.subject,
-        dept: deptMap[local.category]?.replace(/^[^ ]+ /, '') || 'General Grievance Cell',
-        loc: local.location,
-        sla: 'Pending assignment',
-        slaClass: 'sla-warn',
-        priority: local.priority.charAt(0).toUpperCase() + local.priority.slice(1),
-        status: 'open',
-        statusLabel: 'Open',
-        timeline: [{ done: true, icon: '✓', action: 'Complaint submitted', meta: new Date(local.submittedAt).toLocaleString(), note: null },
-                   { done: false, active: true, icon: '●', action: 'Awaiting department assignment', meta: 'Processing...', note: null }]
-      });
-      el.classList.remove('hidden');
-    } else {
-      alert('No complaint found with ID: ' + input + '. Try the demo IDs below.');
-    }
-  }
-  
-  function renderTrackResult(c) {
-    document.getElementById('tc-id').textContent = c.id;
-    document.getElementById('tc-subject').textContent = c.subject;
-    document.getElementById('tc-dept').textContent = c.dept;
-    document.getElementById('tc-loc').textContent = c.loc;
-    const slaEl = document.getElementById('tc-sla');
-    slaEl.textContent = c.sla;
-    slaEl.className = c.slaClass;
-    document.getElementById('tc-priority').textContent = c.priority;
-  
-    const badge = document.getElementById('tc-status');
-    badge.textContent = c.statusLabel;
-    badge.className = 'status-badge ' + c.status;
-  
-    const tl = document.getElementById('trackTimeline');
-    tl.innerHTML = c.timeline.map(t => `
-      <div class="tl-item">
-        <div class="tl-dot ${t.done && !t.escalated ? 'done' : ''} ${t.active ? 'active' : ''} ${t.escalated ? 'escalated' : ''}">${t.icon}</div>
-        <div class="tl-content">
-          <div class="tl-action">${t.action}</div>
-          <div class="tl-meta">${t.meta}</div>
-          ${t.note ? `<div class="tl-note">${t.note}</div>` : ''}
+
+  document.getElementById("success-id").textContent = id;
+  document.getElementById("f-form").style.display = "none";
+  document.getElementById("f-success").style.display = "block";
+}
+
+function resetForm() {
+  document.getElementById("f-form").reset();
+  document.getElementById("f-form").style.display = "block";
+  document.getElementById("f-success").style.display = "none";
+}
+
+// Track 
+function search() {
+  const id  = document.getElementById("track-id").value.trim().toUpperCase();
+  const box = document.getElementById("track-result");
+  const c   = data.find(x => x.id === id);
+  if (!c) { box.innerHTML = `<div class="alert a-danger">No complaint found with ID <b>${id}</b>.</div>`; return; }
+
+  const pct = {open:25, escalated:60, resolved:100}[c.status] || 25;
+  box.innerHTML = `
+    <div class="track-box">
+      <div><div style="font-size:11px;color:rgba(255,255,255,0.5)">TRACKING ID</div>
+        <div class="tid">${c.id}</div>
+        <div class="info">${depts[c.dept]} · ${c.loc} · Filed ${c.filed}</div></div>
+      <div>${badge(c.status)} ${badge(c.priority)}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <b style="font-size:14px">Details</b><br><br>
+        <div style="font-size:13.5px;line-height:2;color:#555">
+          <b>Title:</b> ${c.title}<br>
+          <b>Location:</b> ${c.loc}<br>
+          <b>Status:</b> ${c.status}<br>
+          <b>Priority:</b> ${c.priority}
         </div>
-      </div>`).join('');
-  
-    const feedbackBtn = document.getElementById('feedbackBtn');
-    feedbackBtn.style.display = c.showFeedback ? 'inline-block' : 'none';
-    document.getElementById('feedbackSection').classList.add('hidden');
-  }
-  
-  function escalateComplaint() {
-    alert('Escalation request submitted. The complaint will be reviewed by a senior officer within 4 hours.');
-  }
-  
-  function addNote() {
-    const note = prompt('Add a note or additional information to your complaint:');
-    if (note) alert('Note added successfully: "' + note + '"');
-  }
-  
-  function showFeedback() {
-    document.getElementById('feedbackSection').classList.remove('hidden');
-  }
-  
-  let selectedRating = 0;
-  
-  function setRating(n) {
-    selectedRating = n;
-    document.querySelectorAll('#starRating span').forEach((s, i) => {
-      s.classList.toggle('active', i < n);
-    });
-  }
-  
-  function submitFeedback() {
-    if (!selectedRating) { alert('Please select a star rating.'); return; }
-    alert(`Thank you! Rating of ${selectedRating}/5 submitted. Your feedback helps us improve.`);
-    document.getElementById('feedbackSection').classList.add('hidden');
-  }
-  
-  /* ===== DASHBOARD TABLE ===== */
-  const sampleComplaints = [
-    { id: 'NS-2025-08841', subject: 'Water supply disruption', priority: 'high', sla: '3 days', status: 'inprogress', assignee: 'R. Gupta' },
-    { id: 'NS-2025-08790', subject: 'Sewer overflow on main road', priority: 'urgent', sla: '⚠️ 2 hrs', status: 'escalated', assignee: 'A. Singh' },
-    { id: 'NS-2025-08755', subject: 'No water supply for 3 days', priority: 'high', sla: '1 day', status: 'open', assignee: 'Unassigned' },
-    { id: 'NS-2025-08712', subject: 'Pipeline leakage near school', priority: 'urgent', sla: 'Resolved', status: 'resolved', assignee: 'P. Sharma' },
-    { id: 'NS-2025-08680', subject: 'Low water pressure complaint', priority: 'medium', sla: '6 days', status: 'open', assignee: 'M. Khan' },
-    { id: 'NS-2025-08640', subject: 'Billing discrepancy — Q3', priority: 'low', sla: '12 days', status: 'inprogress', assignee: 'S. Verma' },
-    { id: 'NS-2025-08611', subject: 'Contaminated water supply', priority: 'urgent', sla: 'Resolved', status: 'resolved', assignee: 'R. Gupta' },
-  ];
-  
-  const statusLabels = { open: 'Open', inprogress: 'In Progress', resolved: 'Resolved', escalated: 'Escalated' };
-  
-  function renderDashboardTable() {
-    const statusFilter = document.getElementById('deptFilter')?.value || 'all';
-    const sortBy = document.getElementById('sortFilter')?.value || 'newest';
-    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-  
-    let data = [...sampleComplaints];
-    if (statusFilter !== 'all') data = data.filter(c => c.status === statusFilter);
-    if (sortBy === 'priority') data.sort((a,b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-    else if (sortBy === 'oldest') data.reverse();
-  
-    const tbody = document.getElementById('complaintsTableBody');
-    tbody.innerHTML = data.map(c => `
-      <tr>
-        <td style="font-family:'Courier New',monospace;font-size:0.78rem">${c.id}</td>
-        <td style="max-width:220px">${c.subject}</td>
-        <td><span class="priority-badge p-${c.priority}">${c.priority}</span></td>
-        <td style="font-size:0.8rem">${c.sla}</td>
-        <td><span class="status-badge ${c.status}">${statusLabels[c.status]}</span></td>
-        <td style="font-size:0.82rem">${c.assignee}</td>
-        <td>
-          <button class="action-btn" onclick="viewComplaint('${c.id}')">View</button>
-          ${c.status !== 'resolved' ? `<button class="action-btn resolve" onclick="resolveComplaint('${c.id}')">Resolve</button>` : ''}
-        </td>
-      </tr>`).join('');
-  }
-  
-  function filterComplaints() { renderDashboardTable(); }
-  
-  function viewComplaint(id) {
-    loadDemo(id);
-    showPage('track');
-  }
-  
-  function resolveComplaint(id) {
-    if (confirm(`Mark complaint ${id} as resolved?`)) {
-      alert(`Complaint ${id} marked as resolved. Citizen notification sent.`);
-      renderDashboardTable();
-    }
-  }
-  
-  /* ===== ANALYTICS CHARTS ===== */
-  function getChartColors() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    return {
-      text: isDark ? '#9aabc4' : '#4a5568',
-      border: isDark ? '#2d3752' : '#dde2ef',
-      surface: isDark ? '#1e2535' : '#f0f2f8',
-      blue: '#1a56a0',
-      accent: '#d4401a',
-    };
-  }
-  
-  function initCharts() {
-    const colors = getChartColors();
-  
-    if (window._barChart) window._barChart.destroy();
-    if (window._donutChart) window._donutChart.destroy();
-  
-    const barCtx = document.getElementById('barChart')?.getContext('2d');
-    if (barCtx) {
-      window._barChart = new Chart(barCtx, {
-        type: 'bar',
-        data: {
-          labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
-          datasets: [
-            {
-              label: 'Filed',
-              data: [1840, 2110, 1950, 2340, 2600, 2280],
-              backgroundColor: colors.blue + '33',
-              borderColor: colors.blue,
-              borderWidth: 1.5,
-              borderRadius: 4,
-            },
-            {
-              label: 'Resolved',
-              data: [1720, 2050, 1890, 2200, 2510, 2190],
-              backgroundColor: '#15803d33',
-              borderColor: '#15803d',
-              borderWidth: 1.5,
-              borderRadius: 4,
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { labels: { color: colors.text, font: { family: 'Inter', size: 12 }, boxWidth: 14 } }
-          },
-          scales: {
-            x: { ticks: { color: colors.text }, grid: { color: colors.border } },
-            y: { ticks: { color: colors.text }, grid: { color: colors.border } }
-          }
-        }
-      });
-    }
-  
-    const donutCtx = document.getElementById('donutChart')?.getContext('2d');
-    if (donutCtx) {
-      window._donutChart = new Chart(donutCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Water', 'Roads', 'Electricity', 'Health', 'Education', 'Other'],
-          datasets: [{
-            data: [28, 22, 18, 12, 9, 11],
-            backgroundColor: ['#1a56a0','#d4401a','#f59e0b','#15803d','#7c3aed','#6b7280'],
-            borderWidth: 2,
-            borderColor: colors.surface,
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom', labels: { color: colors.text, font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 12 } }
-          },
-          cutout: '62%'
-        }
-      });
-    }
-  
-    const depts = [
-      { name: 'Water & Sanitation', pct: 94 },
-      { name: 'Electricity', pct: 97 },
-      { name: 'Roads & Transport', pct: 91 },
-      { name: 'Healthcare', pct: 99 },
-      { name: 'Education', pct: 88 },
-    ];
-  
-    document.getElementById('deptPerfList').innerHTML = depts.map(d => `
-      <div class="dept-perf-item">
-        <div class="dpn"><span>${d.name}</span><span>${d.pct}%</span></div>
-        <div class="dept-bar"><div class="dept-fill" style="width:${d.pct}%"></div></div>
-      </div>`).join('');
-  }
-  
-  /* ===== INIT ===== */
-  document.addEventListener('DOMContentLoaded', () => {
-    renderDashboardTable();
+        <div style="height:6px;background:#dde3ed;border-radius:3px;margin-top:14px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:#f0c040;border-radius:3px"></div>
+        </div>
+        <div style="font-size:12px;color:#888;margin-top:4px">${pct}% complete</div>
+      </div>
+      <div class="card">
+        <b style="font-size:14px">Timeline</b><br><br>
+        <div class="timeline">
+          ${c.steps.map((s,i) => {
+            const active = !s.d && (i===0 || c.steps[i-1].d);
+            return `<div class="tl">
+              <div class="tl-left"><div class="dot ${s.d?"done":active?"now":""}"></div><div class="line ${s.d?"done":""}"></div></div>
+              <div class="tl-body"><div class="t" style="color:${s.d?"#1a1a2e":active?"#d4a017":"#bbb"}">${s.l}</div>${s.ts?`<div class="s">${s.ts}</div>`:""}</div>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    </div>`;
+}
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  document.getElementById("dark-btn").textContent =
+    document.body.classList.contains("dark") ? "☀️" : "🌙";
+}
+// Dept 
+function renderDept() {
+  const open = data.filter(c => c.status === "open" || c.status === "escalated");
+  document.getElementById("dept-table").innerHTML = open.map(c => `
+    <tr>
+      <td><b style="font-family:monospace">${c.id}</b></td>
+      <td>${c.name}</td>
+      <td>${c.title}</td>
+      <td>${badge(c.priority)}</td>
+      <td>${badge(c.status)}</td>
+      <td>${c.loc}</td>
+      <td><button class="btn btn-sm btn-dark" onclick="openManage('${c.id}')">Manage</button></td>
+    </tr>`).join("");
+}
+
+function filterTable() {
+  const q = document.getElementById("search-q").value.toLowerCase();
+  document.querySelectorAll("#dept-table tr").forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? "" : "none";
   });
+}
+
+function openManage(id) {
+  const c = complaints.find ? complaints.find(x => x.id === id) : data.find(x => x.id === id);
+  const comp = data.find(x => x.id === id);
+  document.getElementById("modal-body").innerHTML = `
+    <div style="margin-bottom:12px">${badge(comp.status)} ${badge(comp.priority)}</div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Update Status</label>
+      <select id="new-status">
+        <option value="open" ${comp.status==="open"?"selected":""}>Open</option>
+        <option value="inprog">In Progress</option>
+        <option value="resolved" ${comp.status==="resolved"?"selected":""}>Resolved</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>Note</label>
+      <textarea id="new-note" placeholder="Add an update note..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-dark" onclick="saveStatus('${id}')">Save</button>
+      <button class="btn btn-red btn-sm" onclick="escalateIt('${id}')">Escalate</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`;
+  document.getElementById("modal-title").textContent = id + " — " + comp.title.slice(0,35);
+  document.getElementById("manage-modal").classList.add("open");
+}
+
+function saveStatus(id) {
+  const c = data.find(x => x.id === id);
+  c.status = document.getElementById("new-status").value;
+  if (c.status === "resolved") c.steps.forEach(s => s.d = true);
+  closeModal(); renderDept();
+  alert(`${id} updated. Citizen notified.`);
+}
+
+function escalateIt(id) {
+  const c = data.find(x => x.id === id);
+  c.status = "escalated";
+  closeModal(); renderDept();
+  alert(`${id} escalated to senior authority.`);
+}
+
+function closeModal() {
+  document.getElementById("manage-modal").classList.remove("open");
+}
+
+// Admin 
+function renderAdmin() {
+  const bars = [
+    {l:"Roads",n:42,c:"#b86a00"},{l:"Water",n:38,c:"#185fa5"},
+    {l:"Sanit.",n:29,c:"#1a7f4b"},{l:"Elec.",n:24,c:"#7a5800"}
+  ];
+  const max = 42;
+  document.getElementById("dept-bars").innerHTML = bars.map(b =>
+    `<div class="bar"><span class="lbl">${b.l}</span><div class="track"><div class="fill" style="width:${Math.round(b.n/max*100)}%;background:${b.c}">${b.n}</div></div></div>`
+  ).join("");
+}
+
+// Helpers 
+function badge(val) {
+  const map = {
+    open:"b-open Open", resolved:"b-resolved Resolved", escalated:"b-escalated Escalated",
+    high:"b-high High", medium:"b-medium Medium", low:"b-low Low"
+  };
+  const parts = (map[val] || "").split(" ");
+  return parts[0] ? `<span class="badge ${parts[0]}">${parts.slice(1).join(" ")}</span>` : "";
+}
+
+function switchTab(t) {
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + t).classList.add("active");
+  event.target.classList.add("active");
+}
