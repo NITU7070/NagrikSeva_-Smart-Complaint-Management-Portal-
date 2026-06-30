@@ -11,7 +11,7 @@ const depts = { water:"Water Supply", roads:"Roads", electricity:"Electricity", 
 const slaMap = { water:3, roads:7, electricity:5, sanitation:3, health:2, other:5 };
 let nextId = 4;
 
-// Nav 
+// Nav
 function go(view) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -27,7 +27,7 @@ function submitForm() {
   const dept  = document.getElementById("f-dept").value;
   const desc  = document.getElementById("f-desc").value.trim();
   const loc   = document.getElementById("f-loc").value.trim();
-  if (!title || !dept || !desc || !loc) { alert("Fill all required fields."); return; }
+  if (!title || !dept || !desc || !loc) { toast("❌ Fill all required fields."); return; }
 
   const anon = document.getElementById("f-anon").checked;
   const id   = "NS-00" + nextId++;
@@ -49,7 +49,7 @@ function resetForm() {
   document.getElementById("f-success").style.display = "none";
 }
 
-// Track 
+// Track
 function search() {
   const id  = document.getElementById("track-id").value.trim().toUpperCase();
   const box = document.getElementById("track-result");
@@ -64,6 +64,11 @@ function search() {
         <div class="info">${depts[c.dept]} · ${c.loc} · Filed ${c.filed}</div></div>
       <div>${badge(c.status)} ${badge(c.priority)}</div>
     </div>
+
+    <div class="actions" style="margin-top:0;margin-bottom:14px">
+      <button class="btn btn-ghost btn-sm" onclick="printReceipt()">🖨 Print Receipt</button>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="card">
         <b style="font-size:14px">Details</b><br><br>
@@ -92,12 +97,14 @@ function search() {
       </div>
     </div>`;
 }
+
 function toggleDark() {
   document.body.classList.toggle("dark");
   document.getElementById("dark-btn").textContent =
     document.body.classList.contains("dark") ? "☀️" : "🌙";
 }
-// Dept 
+
+// Dept
 function renderDept() {
   const open = data.filter(c => c.status === "open" || c.status === "escalated");
   document.getElementById("dept-table").innerHTML = open.map(c => `
@@ -120,7 +127,6 @@ function filterTable() {
 }
 
 function openManage(id) {
-  const c = complaints.find ? complaints.find(x => x.id === id) : data.find(x => x.id === id);
   const comp = data.find(x => x.id === id);
   document.getElementById("modal-body").innerHTML = `
     <div style="margin-bottom:12px">${badge(comp.status)} ${badge(comp.priority)}</div>
@@ -150,21 +156,21 @@ function saveStatus(id) {
   c.status = document.getElementById("new-status").value;
   if (c.status === "resolved") c.steps.forEach(s => s.d = true);
   closeModal(); renderDept();
-  alert(`${id} updated. Citizen notified.`);
+  toast(`✅ ${id} updated successfully.`);
 }
 
 function escalateIt(id) {
   const c = data.find(x => x.id === id);
   c.status = "escalated";
   closeModal(); renderDept();
-  alert(`${id} escalated to senior authority.`);
+  toast(`⚠️ ${id} escalated to senior authority.`);
 }
 
 function closeModal() {
   document.getElementById("manage-modal").classList.remove("open");
 }
 
-// Admin 
+// Admin
 function renderAdmin() {
   const bars = [
     {l:"Roads",n:42,c:"#b86a00"},{l:"Water",n:38,c:"#185fa5"},
@@ -176,7 +182,7 @@ function renderAdmin() {
   ).join("");
 }
 
-// Helpers 
+// Helpers
 function badge(val) {
   const map = {
     open:"b-open Open", resolved:"b-resolved Resolved", escalated:"b-escalated Escalated",
@@ -191,4 +197,23 @@ function switchTab(t) {
   document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
   document.getElementById("tab-" + t).classList.add("active");
   event.target.classList.add("active");
+}
+
+// ── TOAST NOTIFICATION ──────────────────────────────────────
+function toast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    t.className = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── PRINT RECEIPT ────────────────────────────────────────────
+function printReceipt() {
+  window.print();
 }
